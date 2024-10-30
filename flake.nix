@@ -14,7 +14,7 @@
                     txtx = pkgs.callPackage ./. {};
                 };
                 overlays = {
-                    default = import ./overlay.nix { };
+                    default = import ./overlay.nix;
                 };
                 apps = rec {
                     default = txtx;
