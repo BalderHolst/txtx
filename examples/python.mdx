@@ -5,6 +5,7 @@ This note contains a random ascii creation downloaded from the github repo [devt
 
 import random
 import requests
+import sys
 
 FILES = [
     "animals",
@@ -28,11 +29,16 @@ FILES = [
 ]
 
 file = random.choice(FILES)
-url = f"https://raw.githubusercontent.com/devtooligan/awesome-ascii-art/refs/heads/main/{file}.txt"
+url = f"https://raw.githubusercontent.com/evtooligan/awesome-ascii-art/refs/heads/main/{file}.txt"
 
 print(f"This is ascii art of ***{file}***!")
 
 resp = requests.get(url)
+
+if resp.status_code != 200:
+    print(f"Failed to download ascii art from {url}", file=sys.stderr)
+    exit(1)
+
 print(resp.text)
 
 }
