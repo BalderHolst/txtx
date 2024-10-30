@@ -7,4 +7,9 @@ pkgs.mkShell {
             build
         ]))
     ];
+
+    # Use git hooks
+    shellHook = ''
+        git config core.hooksPath .hooks
+    '';
 }
