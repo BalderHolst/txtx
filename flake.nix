@@ -6,7 +6,7 @@
     outputs = { self, nixpkgs, flake-utils }:
         flake-utils.lib.simpleFlake {
             inherit self nixpkgs;
-            name = "simple-flake";
+            name = "txtx";
             overlay = ./overlay.nix;
             shell = ./shell.nix;
         };

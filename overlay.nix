@@ -1,4 +1,4 @@
 final: prev:
 {
-    txtx = prev.hello;
+    txtx = prev.callPackage ./. { };
 }
