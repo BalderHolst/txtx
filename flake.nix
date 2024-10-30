@@ -13,6 +13,9 @@
                     default = txtx;
                     txtx = pkgs.callPackage ./. {};
                 };
+                overlays = {
+                    default = import ./overlay.nix { };
+                };
                 apps = rec {
                     default = txtx;
                     txtx = flake-utils.lib.mkApp { drv = self.packages.${system}.txtx; };
