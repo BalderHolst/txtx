@@ -1,0 +1,38 @@
+# Random Ascii Art
+This note contains a random ascii creation downloaded from the github repo [devtooligan/awesome-ascii-art](https://github.com/devtooligan/awesome-ascii-art).
+
+![python3]{
+
+import random
+import requests
+
+FILES = [
+    "animals",
+    "borders",
+    "bugs",
+    "characters",
+    "cloudhunter",
+    "clouds",
+    "computers",
+    "contracts",
+    "dinosaurs",
+    "evangelion",
+    "footgun",
+    "hands",
+    "monkeys",
+    "patterns",
+    "poolies",
+    "random",
+    "shapes",
+    "smileys",
+]
+
+file = random.choice(FILES)
+url = f"https://raw.githubusercontent.com/devtooligan/awesome-ascii-art/refs/heads/main/{file}.txt"
+
+print(f"This is ascii art of ***{file}***!")
+
+resp = requests.get(url)
+print(resp.text)
+
+}
