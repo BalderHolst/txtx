@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-./txtx.py README.mdx > README.md

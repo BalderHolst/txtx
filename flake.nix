@@ -1,26 +1,52 @@
 {
     description = "txtx project flake";
 
-    inputs.flake-utils.url = "github:numtide/flake-utils";
+    inputs = {
+        flake-utils.url = "github:numtide/flake-utils";
+        task-gen.url = "github:BalderHolst/task-gen.nix";
+    };
 
-    outputs = { self, nixpkgs, flake-utils }:
+    outputs = { nixpkgs, flake-utils, task-gen, ... }:
         flake-utils.lib.eachDefaultSystem (system:
             let
+                task-lib = task-gen.lib.${system};
                 pkgs = nixpkgs.legacyPackages.${system};
+                tasks = import ./tasks.nix { inherit task-lib; };
             in
-            {
+            rec {
                 packages = rec {
                     default = txtx;
                     txtx = pkgs.callPackage ./. {};
                 };
                 overlays = {
-                    default = import ./overlay.nix;
+                    default = final: prev: {
+                        txtx = packages.txtx;
+                    };
                 };
                 apps = rec {
                     default = txtx;
-                    txtx = flake-utils.lib.mkApp { drv = self.packages.${system}.txtx; };
+                    txtx = flake-utils.lib.mkApp { drv = packages.txtx; };
+                    gen-scripts = with task-lib; mkGenScriptsApp {
+                        ".hooks/pre-push" = mkScript (mkSeq "pre-push" [
+                            tasks.gen-readme
+                            tasks.pre-push-check
+                        ]);
+                    };
                 };
-                devShell = import ./shell.nix { inherit pkgs; };
+                devShell = pkgs.mkShell {
+                    buildInputs = with pkgs; [
+                        nodejs_22
+                            tree-sitter
+                            (python3.withPackages (python-pkgs: with python-pkgs; [
+                                                   build
+                            ]))
+                    ] ++ (task-lib.mkScripts tasks);
+
+                    shellHook = ''
+                        # Use git hooks
+                        git config core.hooksPath .hooks
+                    '' + task-lib.mkShellHook tasks;
+                };
             }
-        );
+    );
 }
