@@ -27,6 +27,7 @@
                     default = txtx;
                     txtx = flake-utils.lib.mkApp { drv = packages.txtx; };
                     gen-scripts = with task-lib; mkGenScriptsApp {
+                        "Makefile" = mkMakefile [tasks.gen-readme];
                         ".hooks/pre-push" = mkScript (mkSeq "pre-push" [
                             tasks.gen-readme
                             tasks.pre-push-check
