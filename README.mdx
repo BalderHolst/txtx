@@ -1,6 +1,21 @@
 # txtx
 A simple script to generate READMEs and other text files by embedding shell and other scripts.
 
+!(python){ # Generate table-of-content
+import re
+
+with open("./README.mdx") as f:
+    lines = f.readlines()
+
+for line in lines:
+    # Check if line is a heading
+    if re.match(r'^#+ ', line):
+        line = line.strip()
+        (prefix, heading) = line.split(' ', 1)
+        if len(prefix) == 1: continue
+        print(f"- [{heading}](#{heading.lower().replace(' ', '-')})")
+}
+
 ### Example Use Case
 Say you want to show the file structure of your project in your README. Instead of manually writing out the structure, or running a command like `tree` and copying in the output, we can simply *embed* the `tree` command into the with the following syntax:
 ```
@@ -17,23 +32,30 @@ This has the benefit of keeping your README up to date with your project structu
 
 This is just one use case, but your could also use it to include a file with the `cat` command, run a script to generate a table of contents, or embed do documentation extracted from doc-comments in your code. You could even download content from the web to be embedded.
 
+For a concrete example, check out the [README.mdx](./README.mdx) which is used to generate this README or any of the other [examples](./examples/).
+
 You can also use the following syntax to embed another language like python into your text file.
+```
 !!(python){
 print("Hello from python!")
 }
+```
 
 Or use it to execute multiple commands and embed the output.
+
+```
 !!(bash){
 echo "Hello from bash!"
 echo "This computer is called $(hostname)"
 echo "The current time is $(date)"
 echo "Goodbye!"
 }
+```
 
-### Setup
+## Setup
 txtx is designed to be easy to setup. You can simply copy the `txtx.py` script into your project and start using it. It is now yours! Do whatever you want with it. It does not require any external dependencies.
 
-#### Nix
+### Nix
 If you are using Nix, you can use the provided flake to add `txtx` to your project. Simply add the following to your `flake.nix` file.
 ```nix
 !{cat ./examples/simple-flake/flake.nix}
