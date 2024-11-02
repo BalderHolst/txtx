@@ -64,6 +64,8 @@ Or use it to execute multiple commands and embed the output.
 }
 ```
 
+Commands can be escaped by repeating the prefix (default: '!') characer.
+
 ## Setup
 txtx is designed to be easy to setup. You can simply copy the `txtx.py` script into your project and start using it. It is now yours! Do whatever you want with it. It does not require any external dependencies.
 
