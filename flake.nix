@@ -2,8 +2,15 @@
     description = "txtx project flake";
 
     inputs = {
+        nixpkgs.url = "github:NixOS/nixpkgs/24.05";
         flake-utils.url = "github:numtide/flake-utils";
-        task-gen.url = "github:BalderHolst/task-gen.nix";
+        task-gen = {
+            url = "github:BalderHolst/task-gen.nix";
+            inputs = {
+                flake-utils.follows = "flake-utils";
+                nixpkgs.follows = "nixpkgs";
+            };
+        };
     };
 
     outputs = { nixpkgs, flake-utils, task-gen, ... }:
