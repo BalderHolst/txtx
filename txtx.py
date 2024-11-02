@@ -111,6 +111,11 @@ class Runner:
                 elif c == L_BRACKET:
                     self.state = RunnerState.IN_EXE
                     self.exe_start = i+1
+                # If we find double prefix, we the command is escaped
+                elif c == PREFIX:
+                    self.state = RunnerState.DEFAULT
+                    put(c)
+                    self.start = None
                 else:
                     self.state = RunnerState.DEFAULT
                     put(self.contents[self.start:i+1])
