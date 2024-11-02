@@ -30,15 +30,18 @@ import sys
 import subprocess
 from enum import Enum
 
-TMP_DIR = "/tmp"
-
+# Default values for syntax
 PREFIX = "!"
 L_EXE = "("
 R_EXE = ")"
 L_SCRIPT = "{"
 R_SCRIPT = "}"
 
+"""Temporary directory for storing scripts."""
+TMP_DIR = "/tmp"
+
 def usage():
+    """Print usage information."""
     print(f"usage: python3 {sys.argv[0]} [OPTIONS] <template-file>");
     print("")
     print("Options:")
@@ -48,19 +51,13 @@ def usage():
     print("  --script-parens <str>  Set the script parentheses. Default is '{}'")
 
 def error(error):
+    """Print an error message and exit."""
     print(error + "\n", file=sys.stderr)
     usage()
     exit(1)
 
-def eprint(s, color=None, **kwargs):
-    if color is not None: print(f"\033[{color.value}m", end="", file=sys.stderr)
-    print(s, file=sys.stderr, **kwargs)
-    if color is not None: print("\033[0m", end="", file=sys.stderr)
-
-def put(s):
-    print(s, end="");
-
 class Color(Enum):
+    """Colors for printing to stderr."""
     RED = 31
     GREEN = 32
     YELLOW = 33
@@ -68,9 +65,19 @@ class Color(Enum):
     MAGENTA = 35
     CYAN = 36
 
+def eprint(s, color: None | Color = None, **kwargs):
+    """Print to stderr. Maybe with a color."""
+    if color is not None: print(f"\033[{color.value}m", end="", file=sys.stderr)
+    print(s, file=sys.stderr, **kwargs)
+    if color is not None: print("\033[0m", end="", file=sys.stderr)
+
+def put(s):
+    """Print to stdout without newline."""
+    print(s, end="");
 
 @dataclass
 class Run:
+    """A run of a shell command or script."""
     shell: str
     exit_code: int
     stdout: str
@@ -81,11 +88,14 @@ class Run:
 
 @dataclass
 class Mark:
+    """A location in a source file to be used later."""
     index: int
     line: int
     col: int
 
 def strip_common_whitespace(s: str):
+    """Strip common white space from the beginning of each line."""
+
     stripPrefix = True
     prefix = None
     for line in s.split("\n"):
@@ -100,14 +110,17 @@ def strip_common_whitespace(s: str):
         s = "\n".join([line[len(prefix):] for line in s.split("\n")])
     return s
 
-class RunnerState(Enum):
+class EvaluatorState(Enum):
+    """The state of the runner."""
     DEFAULT       = 0,
     FOUND_START   = 1,
     IN_SHELL      = 2,
     IN_EXE        = 3,
     IN_SCRIPT     = 4,
 
-class Runner:
+class Evaluator:
+    """Class for evaluating a txtx file."""
+
     def __init__(self, path):
         self.cursor = 0
         self.line = 1
@@ -117,7 +130,7 @@ class Runner:
         self.cmd_start = None
         self.exe_start = None
         self.exe = None
-        self.state = RunnerState.DEFAULT
+        self.state = EvaluatorState.DEFAULT
         self.curly_count = 0
         self.runs = []
         if not os.path.isfile(path):
@@ -126,6 +139,8 @@ class Runner:
             self.contents = f.read()
 
     def evaluate_cmd(self):
+        """Evaluate a parsed shell command."""
+
         mark = self.cmd_start;
         cmd = self.contents[mark.index+len(L_SCRIPT):self.cursor]
         sys.stdout.flush()
@@ -134,6 +149,7 @@ class Runner:
         put(proc.stdout.rstrip())
 
     def evaluate_script(self):
+        """Evaluate a parsed script."""
 
         exe = self.exe
         script = self.contents[self.cmd_start.index+len(L_SCRIPT):self.cursor].rstrip()
@@ -153,6 +169,7 @@ class Runner:
         put(proc.stdout.rstrip())
 
     def mark(self) -> Mark:
+        """Create a mark at the current cursor position."""
         return Mark(self.cursor, self.line, self.col)
 
     def get(self):
@@ -160,6 +177,8 @@ class Runner:
         return self.contents[self.cursor]
 
     def evaluate(self):
+        """Run the evaluation loop."""
+
         while self.cursor < len(self.contents):
             c = self.get()
 
@@ -169,40 +188,40 @@ class Runner:
                 self.col = 0
 
 
-            if self.state == RunnerState.DEFAULT:
+            if self.state == EvaluatorState.DEFAULT:
                 if c == PREFIX:
-                    self.state = RunnerState.FOUND_START
+                    self.state = EvaluatorState.FOUND_START
                     self.start = self.mark()
                 else:
                     put(c)
 
-            elif self.state == RunnerState.FOUND_START:
+            elif self.state == EvaluatorState.FOUND_START:
                 if c == L_SCRIPT:
-                    self.state = RunnerState.IN_SHELL
+                    self.state = EvaluatorState.IN_SHELL
                     self.cmd_start = self.mark()
                     self.curly_count = 1
                 elif c == L_EXE:
-                    self.state = RunnerState.IN_EXE
+                    self.state = EvaluatorState.IN_EXE
                     self.exe_start = self.mark()
                 # If we find double prefix, we the command is escaped
                 elif c == PREFIX:
-                    self.state = RunnerState.DEFAULT
+                    self.state = EvaluatorState.DEFAULT
                     put(c)
                     self.start = None
                 else:
-                    self.state = RunnerState.DEFAULT
+                    self.state = EvaluatorState.DEFAULT
                     put(self.contents[self.start.index:self.cursor+1])
                     self.start = None
 
-            elif self.state == RunnerState.IN_SHELL:
+            elif self.state == EvaluatorState.IN_SHELL:
                 if c == L_SCRIPT: self.curly_count += 1
                 if c == R_SCRIPT: self.curly_count -= 1
                 if self.curly_count == 0:
                     self.evaluate_cmd()
                     self.start = None
-                    self.state = RunnerState.DEFAULT
+                    self.state = EvaluatorState.DEFAULT
 
-            elif self.state == RunnerState.IN_EXE:
+            elif self.state == EvaluatorState.IN_EXE:
                 # Found the end of the executable name
                 if c == R_EXE:
                     self.exe = self.contents[self.exe_start.index+len(L_EXE):self.cursor]
@@ -216,19 +235,19 @@ class Runner:
                         error(f"{self.path}:{self.line} Expected '{L_SCRIPT}' after executable name.")
 
                     self.curly_count = 1
-                    self.state = RunnerState.IN_SCRIPT
+                    self.state = EvaluatorState.IN_SCRIPT
 
                     self.cmd_start = self.mark()
 
                 elif c.isspace():
                     error(f"{self.path}:{self.line} Unexpected space in executable name.")
 
-            elif self.state == RunnerState.IN_SCRIPT:
+            elif self.state == EvaluatorState.IN_SCRIPT:
                 if c == L_SCRIPT:  self.curly_count += 1
                 if c == R_SCRIPT: self.curly_count -= 1
 
                 if self.curly_count == 0:
-                    self.state = RunnerState.DEFAULT
+                    self.state = EvaluatorState.DEFAULT
                     self.evaluate_script()
 
             # Increment cursor
@@ -236,6 +255,7 @@ class Runner:
 
 
     def check_errors(self):
+        """Check for errors in the completed runs, reporting them if found"""
 
         errored = False
         printed = False
@@ -297,7 +317,7 @@ def main():
     if path is None: error("Please provide a file.")
 
 
-    runner = Runner(path)
+    runner = Evaluator(path)
     runner.evaluate()
     runner.check_errors()
 
