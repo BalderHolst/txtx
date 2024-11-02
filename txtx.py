@@ -76,7 +76,14 @@ class Run:
     stdout: str
     stderr: str
     line: int
+    col: int
+    tmp_file: str = None
 
+@dataclass
+class Mark:
+    index: int
+    line: int
+    col: int
 
 class RunnerState(Enum):
     DEFAULT       = 0,
@@ -87,7 +94,9 @@ class RunnerState(Enum):
 
 class Runner:
     def __init__(self, path):
+        self.cursor = 0
         self.line = 1
+        self.col = 0
         self.path = path
         self.start = None
         self.cmd_start = None
@@ -101,46 +110,63 @@ class Runner:
         with open(path) as f:
             self.contents = f.read()
 
-    def evaluate_cmd(self, cmd):
+    def evaluate_cmd(self):
+        mark = self.cmd_start;
+        cmd = self.contents[mark.index+len(L_SCRIPT):self.cursor]
         sys.stdout.flush()
         proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        self.runs.append(Run(cmd, proc.returncode, proc.stdout, proc.stderr, self.line))
+        self.runs.append(Run(cmd, proc.returncode, proc.stdout, proc.stderr, mark.line, mark.col, None))
         put(proc.stdout.rstrip())
 
-    def evaluate_script(self, exe, script):
+    def evaluate_script(self):
+
+        exe = self.exe
+        script = self.contents[self.cmd_start.index+len(L_SCRIPT):self.cursor].rstrip()
+        mark = self.start
 
         # Write script to a temporary file
         dir = f"{TMP_DIR}/txtx"
         os.makedirs(dir, exist_ok=True)
-        script_path = f"{dir}/{exe}"
+        script_path = f"{dir}/{exe}-{mark.line}"
         with open(script_path, "w") as f:
             f.write(script)
         proc = subprocess.run([exe, script_path], capture_output=True, text=True)
-        self.runs.append(Run(f"{exe} {script_path}", proc.returncode, proc.stdout, proc.stderr, self.line))
+        self.runs.append(Run(f"{exe} {script_path}",
+            proc.returncode, proc.stdout, proc.stderr, mark.line, mark.col, script_path))
         put(proc.stdout.rstrip())
 
-    def evaluate(self):
-        i = 0
-        while i < len(self.contents):
-            c = self.contents[i]
+    def mark(self) -> Mark:
+        return Mark(self.cursor, self.line, self.col)
 
-            if c == "\n": self.line += 1
+    def get(self):
+        """Get the current character under cursor."""
+        return self.contents[self.cursor]
+
+    def evaluate(self):
+        while self.cursor < len(self.contents):
+            c = self.get()
+
+            self.col += 1
+            if c == "\n":
+                self.line += 1
+                self.col = 0
+
 
             if self.state == RunnerState.DEFAULT:
                 if c == PREFIX:
                     self.state = RunnerState.FOUND_START
-                    self.start = i
+                    self.start = self.mark()
                 else:
                     put(c)
 
             elif self.state == RunnerState.FOUND_START:
                 if c == L_SCRIPT:
                     self.state = RunnerState.IN_SHELL
-                    self.cmd_start = i+1
+                    self.cmd_start = self.mark()
                     self.curly_count = 1
                 elif c == L_EXE:
                     self.state = RunnerState.IN_EXE
-                    self.exe_start = i+1
+                    self.exe_start = self.mark()
                 # If we find double prefix, we the command is escaped
                 elif c == PREFIX:
                     self.state = RunnerState.DEFAULT
@@ -148,33 +174,35 @@ class Runner:
                     self.start = None
                 else:
                     self.state = RunnerState.DEFAULT
-                    put(self.contents[self.start:i+1])
+                    put(self.contents[self.start.index:self.cursor+1])
                     self.start = None
 
             elif self.state == RunnerState.IN_SHELL:
-                if c == L_SCRIPT:  self.curly_count += 1
+                if c == L_SCRIPT: self.curly_count += 1
                 if c == R_SCRIPT: self.curly_count -= 1
                 if self.curly_count == 0:
-                    cmd = self.contents[self.cmd_start:i]
-                    self.evaluate_cmd(cmd)
+                    self.evaluate_cmd()
                     self.start = None
                     self.state = RunnerState.DEFAULT
 
             elif self.state == RunnerState.IN_EXE:
+                # Found the end of the executable name
                 if c == R_EXE:
+                    self.exe = self.contents[self.exe_start.index+len(L_EXE):self.cursor]
 
-                    self.exe = self.contents[self.exe_start:i]
-                    self.exe_start = None
+                    self.cursor += 1
 
-                    i += 1
-                    if i >= len(self.contents): error(f"{self.path}:{self.line} Unexpected end of file.")
-                    while self.contents[i].isspace(): i += 1
+                    if self.cursor >= len(self.contents):
+                        error(f"{self.path}:{self.line} Unexpected end of file.")
 
-                    if self.contents[i] != L_SCRIPT:
+                    if self.get() != L_SCRIPT:
                         error(f"{self.path}:{self.line} Expected '{L_SCRIPT}' after executable name.")
+
                     self.curly_count = 1
                     self.state = RunnerState.IN_SCRIPT
-                    self.cmd_start = i+1
+
+                    self.cmd_start = self.mark()
+
                 elif c.isspace():
                     error(f"{self.path}:{self.line} Unexpected space in executable name.")
 
@@ -184,11 +212,10 @@ class Runner:
 
                 if self.curly_count == 0:
                     self.state = RunnerState.DEFAULT
-                    script = self.contents[self.cmd_start:i].rstrip()
-                    self.evaluate_script(self.exe, script)
+                    self.evaluate_script()
 
             # Increment cursor
-            i += 1
+            self.cursor += 1
 
 
     def check_errors(self):
@@ -201,7 +228,7 @@ class Runner:
                 if not printed:
                     print("");
                     printed = True
-                eprint(f"{self.path}:{run.line} [{run.shell}] produced output on stderr:")
+                eprint(f"{self.path}:{run.line}:{run.col} [{run.shell}] produced output on stderr:")
                 eprint(run.stderr.rstrip())
 
         for run in self.runs:
@@ -210,7 +237,7 @@ class Runner:
                     print("");
                     printed = True
                 errored = True
-                eprint(f"{self.path}:{run.line} [{run.shell}] failed with exit code {run.exit_code}:",
+                eprint(f"{self.path}:{run.line}:{run.col} [{run.shell}] failed with exit code {run.exit_code}:",
                        color=Color.RED)
                 eprint(run.stderr.rstrip(), color=Color.RED)
 
