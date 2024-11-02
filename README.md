@@ -49,7 +49,7 @@ For a concrete example, check out the [README.mdx](./README.mdx) which is used t
 You can also use the following syntax to embed another language like python into your text file.
 ```
 !(python){
-print("Hello from python!")
+    print("Hello from python!")
 }
 ```
 
@@ -57,10 +57,10 @@ Or use it to execute multiple commands and embed the output.
 
 ```
 !(bash){
-echo "Hello from bash!"
-echo "This computer is called $(hostname)"
-echo "The current time is $(date)"
-echo "Goodbye!"
+    echo "Hello from bash!"
+    echo "This computer is called $(hostname)"
+    echo "The current time is $(date)"
+    echo "Goodbye!"
 }
 ```
 

@@ -1,19 +1,20 @@
 # txtx
 A simple script to generate READMEs and other text files by embedding shell and other scripts.
 
-!(python){ # Generate table-of-content
-import re
+!(python){
+    # Generate table-of-content
+    import re
 
-with open("./README.mdx") as f:
-    lines = f.readlines()
+    with open("./README.mdx") as f:
+        lines = f.readlines()
 
-for line in lines:
-    # Check if line is a heading
-    if re.match(r'^#+ ', line):
-        line = line.strip()
-        (prefix, heading) = line.split(' ', 1)
-        if len(prefix) == 1: continue
-        print(f"- [{heading}](#{heading.lower().replace(' ', '-')})")
+    for line in lines:
+        # Check if line is a heading
+        if re.match(r'^#+ ', line):
+            line = line.strip()
+            (prefix, heading) = line.split(' ', 1)
+            if len(prefix) == 1: continue
+            print(f"- [{heading}](#{heading.lower().replace(' ', '-')})")
 }
 
 ### Example Use Case
@@ -37,7 +38,7 @@ For a concrete example, check out the [README.mdx](./README.mdx) which is used t
 You can also use the following syntax to embed another language like python into your text file.
 ```
 !!(python){
-print("Hello from python!")
+    print("Hello from python!")
 }
 ```
 
@@ -45,10 +46,10 @@ Or use it to execute multiple commands and embed the output.
 
 ```
 !!(bash){
-echo "Hello from bash!"
-echo "This computer is called $(hostname)"
-echo "The current time is $(date)"
-echo "Goodbye!"
+    echo "Hello from bash!"
+    echo "This computer is called $(hostname)"
+    echo "The current time is $(date)"
+    echo "Goodbye!"
 }
 ```
 

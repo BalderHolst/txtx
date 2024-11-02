@@ -85,6 +85,21 @@ class Mark:
     line: int
     col: int
 
+def strip_common_whitespace(s: str):
+    stripPrefix = True
+    prefix = None
+    for line in s.split("\n"):
+        if line.strip() == "": continue
+        if prefix is None:
+            prefix = line[:len(line) - len(line.lstrip())]
+            continue
+        if not line.startswith(prefix):
+            stripPrefix = False
+            break
+    if stripPrefix:
+        s = "\n".join([line[len(prefix):] for line in s.split("\n")])
+    return s
+
 class RunnerState(Enum):
     DEFAULT       = 0,
     FOUND_START   = 1,
@@ -123,6 +138,8 @@ class Runner:
         exe = self.exe
         script = self.contents[self.cmd_start.index+len(L_SCRIPT):self.cursor].rstrip()
         mark = self.start
+
+        script = strip_common_whitespace(script)
 
         # Write script to a temporary file
         dir = f"{TMP_DIR}/txtx"
