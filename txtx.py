@@ -9,13 +9,19 @@ from enum import Enum
 TMP_DIR = "/tmp"
 
 PREFIX = "!"
-L_BRACKET = "["
-R_BRACKET = "]"
-L_CURLY = "{"
-R_CURLY = "}"
+L_EXE = "("
+R_EXE = ")"
+L_SCRIPT = "{"
+R_SCRIPT = "}"
 
 def usage():
-    print(f"usage: python3 {sys.argv[0]} <template-file>");
+    print(f"usage: python3 {sys.argv[0]} [OPTIONS] <template-file>");
+    print("")
+    print("Options:")
+    print("  --help, -h             Display this help message.")
+    print("  --prefix <char>        Set the prefix character. Default is '!'")
+    print("  --exe-parens <str>     Set the executable parentheses. Default is '()'")
+    print("  --script-parens <str>  Set the script parentheses. Default is '{}'")
 
 def error(error):
     print(error + "\n", file=sys.stderr)
@@ -104,11 +110,11 @@ class Runner:
                     put(c)
 
             elif self.state == RunnerState.FOUND_START:
-                if c == L_CURLY:
+                if c == L_SCRIPT:
                     self.state = RunnerState.IN_SHELL
                     self.cmd_start = i+1
                     self.curly_count = 1
-                elif c == L_BRACKET:
+                elif c == L_EXE:
                     self.state = RunnerState.IN_EXE
                     self.exe_start = i+1
                 # If we find double prefix, we the command is escaped
@@ -122,8 +128,8 @@ class Runner:
                     self.start = None
 
             elif self.state == RunnerState.IN_SHELL:
-                if c == L_CURLY:  self.curly_count += 1
-                if c == R_CURLY: self.curly_count -= 1
+                if c == L_SCRIPT:  self.curly_count += 1
+                if c == R_SCRIPT: self.curly_count -= 1
                 if self.curly_count == 0:
                     cmd = self.contents[self.cmd_start:i]
                     self.evaluate_cmd(cmd)
@@ -131,7 +137,7 @@ class Runner:
                     self.state = RunnerState.DEFAULT
 
             elif self.state == RunnerState.IN_EXE:
-                if c == R_BRACKET:
+                if c == R_EXE:
 
                     self.exe = self.contents[self.exe_start:i]
                     self.exe_start = None
@@ -140,8 +146,8 @@ class Runner:
                     if i >= len(self.contents): error(f"{self.path}:{self.line} Unexpected end of file.")
                     while self.contents[i].isspace(): i += 1
 
-                    if self.contents[i] != L_CURLY:
-                        error(f"{self.path}:{self.line} Expected '{L_CURLY}' after executable name.")
+                    if self.contents[i] != L_SCRIPT:
+                        error(f"{self.path}:{self.line} Expected '{L_SCRIPT}' after executable name.")
                     self.curly_count = 1
                     self.state = RunnerState.IN_SCRIPT
                     self.cmd_start = i+1
@@ -149,8 +155,8 @@ class Runner:
                     error(f"{self.path}:{self.line} Unexpected space in executable name.")
 
             elif self.state == RunnerState.IN_SCRIPT:
-                if c == L_CURLY:  self.curly_count += 1
-                if c == R_CURLY: self.curly_count -= 1
+                if c == L_SCRIPT:  self.curly_count += 1
+                if c == R_SCRIPT: self.curly_count -= 1
 
                 if self.curly_count == 0:
                     self.state = RunnerState.DEFAULT
@@ -188,11 +194,40 @@ class Runner:
 
 
 def main():
+    global L_EXE, R_EXE, L_SCRIPT, R_SCRIPT, PREFIX
+
     [_, *args] = sys.argv
 
-    if len(args) == 0: error("Please provide a file.")
+    path = None
 
-    [path, *args] = args
+    while len(args) > 0:
+        arg = args.pop(0)
+        match arg:
+            case "-h" | "--help":
+                usage()
+                exit(0)
+            case "--prefix":
+                if len(args) == 0: error("Expected a character for --prefix.")
+                PREFIX = args.pop(0)
+                if len(PREFIX) != 1: error(f"Expected one character for --prefix. Got '{PREFIX}'.")
+            case "--exe-parens":
+                if len(args) == 0: error("Expected a two character string for --exe-parens.")
+                parens = args.pop(0)
+                if len(parens) != 2: error(f"Expected two characters for --exe-parens. Got '{parens}'.")
+                L_EXE = parens[0]
+                R_EXE = parens[1]
+            case "--script-parens":
+                if len(args) == 0: error("Expected a two character string for --script-parens.")
+                parens = args.pop(0)
+                if len(parens) != 2: error(f"Expected two characters for --script-parens. Got '{parens}'.")
+                L_SCRIPT = parens[0]
+                R_SCRIPT = parens[1]
+            case _:
+                if path is not None: error(f"Only one file can be provided. Got '{path}' and '{arg}'.")
+                path = arg
+
+    if path is None: error("Please provide a file.")
+
 
     runner = Runner(path)
     runner.evaluate()
