@@ -16,5 +16,5 @@ in
         '';
     };
     pre-push-check = check-no-uncommited "Please commit all changes before pushing";
-    gen-scripts = mkGenScriptsTask "gen-scripts";
+    gen-scripts = task-lib.gen.gen-scripts "gen-scripts";
 }

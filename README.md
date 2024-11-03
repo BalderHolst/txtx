@@ -30,14 +30,13 @@ When compiling your README, the `tree` command will be executed and the output w
 ├── flake.nix
 ├── LICENSE
 ├── Makefile
-├── overlay.nix
 ├── pyproject.toml
 ├── README.md
 ├── README.mdx
 ├── tasks.nix
 └── txtx.py
 
-3 directories, 17 files
+3 directories, 16 files
 ```
 
 This has the benefit of keeping your README up to date with your project structure, without having to manually update it.

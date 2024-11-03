@@ -187,7 +187,6 @@ class Evaluator:
                 self.line += 1
                 self.col = 0
 
-
             if self.state == EvaluatorState.DEFAULT:
                 if c == PREFIX:
                     self.state = EvaluatorState.FOUND_START
@@ -315,7 +314,6 @@ def main():
                 path = arg
 
     if path is None: error("Please provide a file.")
-
 
     runner = Evaluator(path)
     runner.evaluate()

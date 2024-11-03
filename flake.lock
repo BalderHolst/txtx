@@ -67,11 +67,11 @@
         "txtx": "txtx"
       },
       "locked": {
-        "lastModified": 1730544879,
-        "narHash": "sha256-J67zT+2vRVdwxEze5DKgJuclFJU1afjsq4yDflQ336k=",
+        "lastModified": 1730624694,
+        "narHash": "sha256-UEQ9h+C9qsxYbF9bfu+o/jFuGFrE4XBs4Gpimo6zFvY=",
         "owner": "BalderHolst",
         "repo": "task-gen.nix",
-        "rev": "1d5b132925208db5cd4483944bba5dbebdb6f8a2",
+        "rev": "5e5c11837bf8484411648b49ae120c7bd8b0bdcc",
         "type": "github"
       },
       "original": {
